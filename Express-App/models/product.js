@@ -1,55 +1,47 @@
-const products = [
-  {
-    id: "12345",
-    name: "Samsung S6",
-    price: "2000",
-    imageUrl: "1.jpg",
-    description: "iyi telefon",
-  },
-
-  {
-    id: "45987",
-    name: "Samsung S7",
-    price: "3000",
-    imageUrl: "2.jpg",
-    description: "Harika telefon",
-  },
-
-  {
-    id: "45832",
-    name: "Samsung S8",
-    price: "4000",
-    imageUrl: "3.jpg",
-    description: "Güzel telefon",
-  },
-];
+const connection = require("../utility/database");
 
 module.exports = class Product {
-  constructor(name, price, imageUrl, description) {
-    this.id = (Math.floor(Math.random() * 99999) + 1).toString();
+  constructor(name, price, imageUrl, description, categoryid) {
     this.name = name;
     this.price = price;
     this.imageUrl = imageUrl;
     this.description = description;
+    this.categoryid = categoryid;
   }
   saveProduct() {
-    products.push(this);
+    return connection.execute(
+      "INSERT INTO products (name, price, imageUrl, description, categoryid) VALUES (?,?,?,?,?)",
+      [this.name, this.price, this.imageUrl, this.description, this.categoryid]
+    );
   }
 
   static getAll() {
-    return products;
+    return connection.execute("SELECT * FROM products");
   }
 
   static getById(id) {
-    const product = products.find((i) => i.id === id);
-    return product;
+    return connection.execute("SELECT * FROM products WHERE products.id=?", [
+      id,
+    ]);
   }
 
+  static getProductsByCategoryId(categoryid) {}
+
   static Update(product) {
-    const index = products.findIndex((i) => i.id === product.id);
-    products[index].name = product.name;
-    products[index].price = product.price;
-    products[index].imageUrl = product.imageUrl;
-    products[index].description = product.description;
+    return connection.execute(
+      "UPDATE products SET products.name=?, products.price=?, products.imageUrl=?, products.description=?, products.categoryid=? WHERE products.id=?",
+      [
+        product.name,
+        product.price,
+        product.imageUrl,
+        product.description,
+        product.categoryid,
+        product.id,
+      ]
+    );
+  }
+
+  static DeleteById(id) {
+    return connection.execute("DELETE FROM products WHERE id=?", [id]);
   }
 };
