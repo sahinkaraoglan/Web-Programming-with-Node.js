@@ -11,7 +11,9 @@ app.set("views", "./views");
 
 const adminRoutes = require("./routes/admin");
 const userRoutes = require("./routes/shop");
+
 const errorController = require("./controllers/errors");
+const sequelize = require("./utility/database");
 
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -31,7 +33,17 @@ connection
     console.log(err);
   });
 */
+
 app.use(errorController.get404Page);
+
+sequelize
+  .sync()
+  .then((result) => {
+    console.log(result);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 
 app.listen(3000, () => {
   console.log("listening on port 3000");
