@@ -51,11 +51,25 @@ exports.postAddProduct = (req, res, next) => {
 exports.getEditProduct = (req, res, next) => {
   Product.findById(req.params.productid)
     .then((product) => {
-      console.log(product);
-      res.render("admin/edit-product", {
-        title: "Edit Product",
-        path: "/admin/products",
-        product: product,
+      Category.findAll().then((categories) => {
+        categories = categories.map((category) => {
+          if (product.categories) {
+            product.categories.find((item) => {
+              if (item == category._id) {
+                category.selected = true;
+              }
+            });
+          }
+
+          return category;
+        });
+
+        res.render("admin/edit-product", {
+          title: "Edit Product",
+          path: "/admin/products",
+          product: product,
+          categories: categories,
+        });
       });
     })
     .catch((err) => {
@@ -69,13 +83,14 @@ exports.postEditProduct = (req, res, next) => {
   const price = req.body.price;
   const imageUrl = req.body.imageUrl;
   const description = req.body.description;
-  // const categoryid = req.body.categoryid;
+  const categories = req.body.categoryids;
 
   const product = new Product(
     name,
     price,
     description,
     imageUrl,
+    categories,
     id,
     req.user._id
   );

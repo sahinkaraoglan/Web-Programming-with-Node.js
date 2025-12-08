@@ -19,9 +19,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use((req, res, next) => {
-  User.findByUserName("sahin")
+  User.findByUserName("sahinkaraoglan")
     .then((user) => {
-      req.user = new User(user.name, user.email, user._id);
+      req.user = new User(user.name, user.email, user.cart, user._id);
+      console.log(req.user);
       next();
     })
     .catch((err) => {
@@ -35,10 +36,10 @@ app.use(userRoutes);
 app.use(errorController.get404Page);
 
 mongoConnect(() => {
-  User.findByUserName("sahin")
+  User.findByUserName("sahinkaraoglan")
     .then((user) => {
       if (!user) {
-        user = new User("sahin", "email@sahin.com");
+        user = new User("sahinkaraoglan", "email@sahinkaraoglan.com");
         return user.save();
       }
       return user;
