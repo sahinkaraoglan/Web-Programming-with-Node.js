@@ -1,10 +1,14 @@
 const Product = require("../models/product");
 const Category = require("../models/category");
+const Order = require("../models/order");
 
 exports.getIndex = (req, res, next) => {
-  Product.findAll()
+  Product.find()
     .then((products) => {
-      Category.findAll().then((categories) => {
+      return products;
+    })
+    .then((products) => {
+      Category.find().then((categories) => {
         res.render("shop/index", {
           title: "Shopping",
           products: products,
@@ -19,9 +23,41 @@ exports.getIndex = (req, res, next) => {
 };
 
 exports.getProducts = (req, res, next) => {
-  Product.findAll()
+  // eq (equal)
+  // ne (not equal)
+  // gt (greater than)
+  // gte (greater than or equal)
+  // lt (less than)
+  // lte (less than or equal)
+  // in
+  // nin (not in)
+  Product.find()
+    // .find({ price: { $eq: 2000 } })
+    // .find({ price: { $ne: 2000 } })
+    // .find({ price: { $gt: 2000 } })
+    // .find({ price: { $gte: 2000 } })
+    // .find({ price: { $lt: 2000 } })
+    // .find({ price: { $lte: 2000 } })
+    // .find({ price: { $in: [1000,2000,3000] } })
+    // .find({ price: { $gte: 1000, $lte: 2000 } })
+    // .or([{ price: { $gt: 2000 }, name: 'Samsung S6' }])
+    // .find({name: /^Samsung/})
+    // .find({name: /Samsung$/})
+    // .find({name: /.*Samsung.*/})
     .then((products) => {
-      Category.findAll().then((categories) => {
+      return products;
+
+      // Category.findAll().then((categories) => {
+      //   res.render("shop/products", {
+      //     title: "Products",
+      //     products: products,
+      //     path: "/",
+      //     categories: categories,
+      //   });
+      // });
+    })
+    .then((products) => {
+      Category.find().then((categories) => {
         res.render("shop/products", {
           title: "Products",
           products: products,
@@ -39,10 +75,12 @@ exports.getProductsByCategoryId = (req, res, next) => {
   const categoryid = req.params.categoryid;
   const model = [];
 
-  Category.findAll()
+  Category.find()
     .then((categories) => {
       model.categories = categories;
-      return Product.findByCategoryId(categoryid);
+      return Product.find({
+        categories: categoryid,
+      });
     })
     .then((products) => {
       res.render("shop/products", {
@@ -60,6 +98,7 @@ exports.getProductsByCategoryId = (req, res, next) => {
 
 exports.getProduct = (req, res, next) => {
   Product.findById(req.params.productid)
+    //.findOne({name : 'Samsung S6', price: 2000})
     .then((product) => {
       res.render("shop/product-detail", {
         title: product.name,
@@ -74,13 +113,12 @@ exports.getProduct = (req, res, next) => {
 
 exports.getCart = (req, res, next) => {
   req.user
-    .getCart()
-    .then((products) => {
-      console.log(products);
+    .populate("cart.items.productId") // BURASI ARTIK PROMISE DÖNER
+    .then((user) => {
       res.render("shop/cart", {
         title: "Cart",
         path: "/cart",
-        products: products,
+        products: user.cart.items,
       });
     })
     .catch((err) => {
@@ -108,9 +146,9 @@ exports.postCartItemDelete = (req, res, next) => {
 };
 
 exports.getOrders = (req, res, next) => {
-  req.user
-    .getOrders()
+  Order.find({ "user.userId": req.user._id })
     .then((orders) => {
+      console.log(orders);
       res.render("shop/orders", {
         title: "Orders",
         path: "/orders",
@@ -122,9 +160,35 @@ exports.getOrders = (req, res, next) => {
 
 exports.postOrder = (req, res, next) => {
   req.user
-    .addOrder()
-    .then(() => {
-      res.redirect("/cart");
+    .populate("cart.items.productId")
+    .then((user) => {
+      const order = new Order({
+        user: {
+          userId: req.user._id,
+          name: req.user.name,
+          email: req.user.email,
+        },
+        items: user.cart.items.map((p) => {
+          return {
+            product: {
+              _id: p.productId._id,
+              name: p.productId.name,
+              price: p.productId.price,
+              imageUrl: p.productId.imageUrl,
+            },
+            quantity: p.quantity,
+          };
+        }),
+      });
+      return order.save();
     })
-    .catch((err) => console.log(err));
+    .then(() => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect("/orders");
+    })
+    .catch((err) => {
+      console.log(err);
+    });
 };
