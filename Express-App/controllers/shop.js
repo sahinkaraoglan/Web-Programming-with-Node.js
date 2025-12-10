@@ -3,6 +3,9 @@ const Category = require("../models/category");
 const Order = require("../models/order");
 
 exports.getIndex = (req, res, next) => {
+  // console.log(req.isAuthenticated);
+  //console.log(req.cookies.isAuthenticated);
+  console.log(req.session.isAuthenticated);
   Product.find()
     .then((products) => {
       return products;
@@ -14,6 +17,7 @@ exports.getIndex = (req, res, next) => {
           products: products,
           path: "/",
           categories: categories,
+          isAuthenticated: req.session.isAuthenticated,
         });
       });
     })
@@ -23,38 +27,9 @@ exports.getIndex = (req, res, next) => {
 };
 
 exports.getProducts = (req, res, next) => {
-  // eq (equal)
-  // ne (not equal)
-  // gt (greater than)
-  // gte (greater than or equal)
-  // lt (less than)
-  // lte (less than or equal)
-  // in
-  // nin (not in)
   Product.find()
-    // .find({ price: { $eq: 2000 } })
-    // .find({ price: { $ne: 2000 } })
-    // .find({ price: { $gt: 2000 } })
-    // .find({ price: { $gte: 2000 } })
-    // .find({ price: { $lt: 2000 } })
-    // .find({ price: { $lte: 2000 } })
-    // .find({ price: { $in: [1000,2000,3000] } })
-    // .find({ price: { $gte: 1000, $lte: 2000 } })
-    // .or([{ price: { $gt: 2000 }, name: 'Samsung S6' }])
-    // .find({name: /^Samsung/})
-    // .find({name: /Samsung$/})
-    // .find({name: /.*Samsung.*/})
     .then((products) => {
       return products;
-
-      // Category.findAll().then((categories) => {
-      //   res.render("shop/products", {
-      //     title: "Products",
-      //     products: products,
-      //     path: "/",
-      //     categories: categories,
-      //   });
-      // });
     })
     .then((products) => {
       Category.find().then((categories) => {
@@ -63,6 +38,7 @@ exports.getProducts = (req, res, next) => {
           products: products,
           path: "/",
           categories: categories,
+          isAuthenticated: req.session.isAuthenticated,
         });
       });
     })
@@ -89,6 +65,7 @@ exports.getProductsByCategoryId = (req, res, next) => {
         categories: model.categories,
         selectedCategory: categoryid,
         path: "/products",
+        isAuthenticated: req.session.isAuthenticated,
       });
     })
     .catch((err) => {
@@ -98,12 +75,13 @@ exports.getProductsByCategoryId = (req, res, next) => {
 
 exports.getProduct = (req, res, next) => {
   Product.findById(req.params.productid)
-    //.findOne({name : 'Samsung S6', price: 2000})
+    //.findOne({ name : 'Samsung S6', price: 2000 })
     .then((product) => {
       res.render("shop/product-detail", {
         title: product.name,
         product: product,
         path: "/products",
+        isAuthenticated: req.session.isAuthenticated,
       });
     })
     .catch((err) => {
@@ -113,12 +91,14 @@ exports.getProduct = (req, res, next) => {
 
 exports.getCart = (req, res, next) => {
   req.user
-    .populate("cart.items.productId") // BURASI ARTIK PROMISE DÖNER
+    .populate("cart.items.productId")
+    //.execPopulate()
     .then((user) => {
       res.render("shop/cart", {
         title: "Cart",
         path: "/cart",
         products: user.cart.items,
+        isAuthenticated: req.session.isAuthenticated,
       });
     })
     .catch((err) => {
@@ -153,6 +133,7 @@ exports.getOrders = (req, res, next) => {
         title: "Orders",
         path: "/orders",
         orders: orders,
+        isAuthenticated: req.session.isAuthenticated,
       });
     })
     .catch((err) => console.log(err));
@@ -161,6 +142,7 @@ exports.getOrders = (req, res, next) => {
 exports.postOrder = (req, res, next) => {
   req.user
     .populate("cart.items.productId")
+    //.execPopulate()
     .then((user) => {
       const order = new Order({
         user: {
