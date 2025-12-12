@@ -5,11 +5,8 @@ exports.getProducts = (req, res, next) => {
   Product.find()
     .populate("userId", "name -_id")
     .select("name price imageUrl userId")
-    // .find({ name: 'IPhone 6', price: 2000 })
-    // .limit(10)
-    // .sort({ name: 1 })
-    // .select({ name: 1, price: 1 })
     .then((products) => {
+      console.log(products);
       res.render("admin/products", {
         title: "Admin Products",
         products: products,
@@ -79,6 +76,7 @@ exports.getEditProduct = (req, res, next) => {
           path: "/admin/products",
           product: product,
           categories: categories,
+          isAuthenticated: req.session.isAuthenticated,
         });
       });
     })
@@ -88,9 +86,6 @@ exports.getEditProduct = (req, res, next) => {
 };
 
 exports.postEditProduct = (req, res, next) => {
-  // query first
-  // update first
-
   const id = req.body.id;
   const name = req.body.name;
   const price = req.body.price;
@@ -98,15 +93,18 @@ exports.postEditProduct = (req, res, next) => {
   const description = req.body.description;
   const ids = req.body.categoryids;
 
-  Product.findById(id)
-    .then((product) => {
-      product.name = name;
-      product.price = price;
-      product.imageUrl = imageUrl;
-      product.description = description;
-      product.categories = ids;
-      return product.save();
-    })
+  Product.update(
+    { _id: id },
+    {
+      $set: {
+        name: name,
+        price: price,
+        imageUrl: imageUrl,
+        description: description,
+        categories: ids,
+      },
+    }
+  )
     .then(() => {
       res.redirect("/admin/products?action=edit");
     })
@@ -116,7 +114,7 @@ exports.postEditProduct = (req, res, next) => {
 exports.postDeleteProduct = (req, res, next) => {
   const id = req.body.productid;
 
-  Product.findByIdAndDelete(id) //Mongoose 8 sürümünde remove yok delete var.
+  Product.findByIdAndRemove(id)
     .then(() => {
       console.log("product has been deleted.");
       res.redirect("/admin/products?action=delete");
@@ -195,7 +193,7 @@ exports.postEditCategory = (req, res, next) => {
 exports.postDeleteCategory = (req, res, next) => {
   const id = req.body.categoryid;
 
-  Category.findByIdAndDelete(id)
+  Category.findByIdAndRemove(id)
     .then(() => {
       res.redirect("/admin/categories?action=delete");
     })

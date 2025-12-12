@@ -8,18 +8,20 @@ const mongoConnect = (callback) => {
     .then((client) => {
       console.log("connected");
       _db = client.db();
-      callback(client);
+      callback();
     })
     .catch((err) => {
       console.log(err);
       throw err;
     });
 };
+
 const getdb = () => {
   if (_db) {
     return _db;
   }
   throw "No Database";
 };
+
 exports.mongoConnect = mongoConnect;
 exports.getdb = getdb;

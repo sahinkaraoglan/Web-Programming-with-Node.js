@@ -5,7 +5,7 @@ block styles
 
 block content
     form(action="/admin/products" method="POST")
-        input(type='hidden' name='_csrf' value=`${csrfToken}`)
+        input(type="hidden" name="_csrf" value=`${csrfToken}`)
         input(type="hidden" name="id" value=`${product._id}`)
 
         .form-group.row
@@ -37,4 +37,4 @@ block content
 
         .form-group.row
             .col-sm-10.offset-sm-2
-                input(type="submit" value="Save Product").btn.btn-primary 
+                input(type="submit" value="Save Product").btn.btn-primary

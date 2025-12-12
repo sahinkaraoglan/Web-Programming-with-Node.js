@@ -28,17 +28,17 @@ const store = MongoStore.create({
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-
 app.use(
   session({
     secret: "keyboard cat",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 3600000 },
+    cookie: {
+      maxAge: 3600000,
+    },
     store: store,
   })
 );
-
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use((req, res, next) => {
@@ -55,7 +55,6 @@ app.use((req, res, next) => {
       console.log(err);
     });
 });
-
 app.use(csurf());
 
 app.use("/admin", adminRoutes);

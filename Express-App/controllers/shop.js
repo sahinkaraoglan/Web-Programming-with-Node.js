@@ -4,8 +4,9 @@ const Order = require("../models/order");
 
 exports.getIndex = (req, res, next) => {
   // console.log(req.isAuthenticated);
-  //console.log(req.cookies.isAuthenticated);
-  console.log(req.session.isAuthenticated);
+  // console.log(req.cookies.isAuthenticated);
+  console.log(req.session.isAuthenticated ?? false);
+
   Product.find()
     .then((products) => {
       return products;
@@ -88,7 +89,6 @@ exports.getProduct = (req, res, next) => {
 exports.getCart = (req, res, next) => {
   req.user
     .populate("cart.items.productId")
-    //.execPopulate()
     .then((user) => {
       res.render("shop/cart", {
         title: "Cart",
@@ -136,7 +136,6 @@ exports.getOrders = (req, res, next) => {
 exports.postOrder = (req, res, next) => {
   req.user
     .populate("cart.items.productId")
-    //.execPopulate()
     .then((user) => {
       const order = new Order({
         user: {
