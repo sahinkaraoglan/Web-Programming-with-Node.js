@@ -8,6 +8,7 @@ const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const csurf = require("csurf");
+const multer = require("multer");
 
 app.set("view engine", "pug");
 app.set("views", "./views");
@@ -21,12 +22,25 @@ const errorController = require("./controllers/errors");
 const User = require("./models/user");
 const ConnectionString = "mongodb://localhost/node-app";
 
-const store = MongoStore.create({
+var store = MongoStore.create({
   mongoUrl: ConnectionString,
   collectionName: "mySessions",
 });
 
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./public/img/");
+  },
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
+});
+
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(multer({ storage: storage }).single("image"));
 app.use(cookieParser());
 app.use(
   session({
@@ -61,7 +75,12 @@ app.use("/admin", adminRoutes);
 app.use(userRoutes);
 app.use(accountRoutes);
 
+app.use("/500", errorController.get500Page);
 app.use(errorController.get404Page);
+app.use((error, req, res, next) => {
+  console.log(error);
+  res.status(500).render("error/500", { title: "Error" });
+});
 
 mongoose
   .connect(ConnectionString)

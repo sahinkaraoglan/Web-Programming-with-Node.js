@@ -1,12 +1,12 @@
 const Product = require("../models/product");
 const Category = require("../models/category");
+const fs = require("fs");
 
 exports.getProducts = (req, res, next) => {
-  Product.find()
+  Product.find({ userId: req.user._id })
     .populate("userId", "name -_id")
     .select("name price imageUrl userId")
     .then((products) => {
-      console.log(products);
       res.render("admin/products", {
         title: "Admin Products",
         products: products,
@@ -15,7 +15,7 @@ exports.getProducts = (req, res, next) => {
       });
     })
     .catch((err) => {
-      console.log(err);
+      next(err);
     });
 };
 
@@ -23,21 +23,41 @@ exports.getAddProduct = (req, res, next) => {
   res.render("admin/add-product", {
     title: "New Product",
     path: "/admin/add-product",
+    inputs: {
+      name: "",
+      price: "",
+      description: "",
+    },
   });
 };
 
 exports.postAddProduct = (req, res, next) => {
   const name = req.body.name;
   const price = req.body.price;
-  const imageUrl = req.body.imageUrl;
+  const image = req.file;
   const description = req.body.description;
+
+  if (!image) {
+    return res.render("admin/add-product", {
+      title: "New Product",
+      path: "/admin/add-product",
+      errorMessage: "Lütfen bir resim seçiniz",
+      inputs: {
+        name: name,
+        price: price,
+        description: description,
+      },
+    });
+  }
 
   const product = new Product({
     name: name,
     price: price,
-    imageUrl: imageUrl,
+    imageUrl: image.filename,
     description: description,
     userId: req.user,
+    isActive: false,
+    tags: ["akıllı telefon"],
   });
 
   product
@@ -46,15 +66,50 @@ exports.postAddProduct = (req, res, next) => {
       res.redirect("/admin/products");
     })
     .catch((err) => {
-      console.log(err);
+      if (err.name == "ValidationError") {
+        let message = "";
+        for (field in err.errors) {
+          message += err.errors[field].message + "<br>";
+        }
+
+        res.render("admin/add-product", {
+          title: "New Product",
+          path: "/admin/add-product",
+          errorMessage: message,
+          inputs: {
+            name: name,
+            price: price,
+            description: description,
+          },
+        });
+      } else {
+        // hata mesajı
+        // yönlendirme
+        // 500 page
+
+        // res.status(500).render('admin/add-product', {
+        //     title: 'New Product',
+        //     path: '/admin/add-product',
+        //     errorMessage: 'Beklenmedik bir hata oluştu. Lütfen tekrar deneyiniz.',
+        //     inputs: {
+        //         name: name,
+        //         price: price,
+        //         description: description
+        //     }
+        // });
+        // res.redirect('/500');
+        next(err);
+      }
     });
 };
 
 exports.getEditProduct = (req, res, next) => {
-  Product.findById(req.params.productid)
+  Product.findOne({ _id: req.params.productid, userId: req.user._id })
     //.populate('categories', 'name -_id')
     .then((product) => {
-      console.log(product);
+      if (!product) {
+        return res.redirect("/");
+      }
       return product;
     })
     .then((product) => {
@@ -76,12 +131,11 @@ exports.getEditProduct = (req, res, next) => {
           path: "/admin/products",
           product: product,
           categories: categories,
-          isAuthenticated: req.session.isAuthenticated,
         });
       });
     })
     .catch((err) => {
-      console.log(err);
+      next(err);
     });
 };
 
@@ -89,41 +143,63 @@ exports.postEditProduct = (req, res, next) => {
   const id = req.body.id;
   const name = req.body.name;
   const price = req.body.price;
-  const imageUrl = req.body.imageUrl;
+  const image = req.file;
   const description = req.body.description;
   const ids = req.body.categoryids;
 
-  Product.update(
-    { _id: id },
-    {
-      $set: {
-        name: name,
-        price: price,
-        imageUrl: imageUrl,
-        description: description,
-        categories: ids,
-      },
-    }
-  )
-    .then(() => {
+  Product.findOne({ _id: id, userId: req.user._id })
+    .then((product) => {
+      if (!product) {
+        return res.redirect("/");
+      }
+      product.name = name;
+      product.price = price;
+      product.description = description;
+      product.categories = ids;
+
+      if (image) {
+        fs.unlink("public/img/" + product.imageUrl, (err) => {
+          if (err) {
+            console.log(err);
+          }
+        });
+        product.imageUrl = image.filename;
+      }
+
+      return product.save();
+    })
+    .then((result) => {
       res.redirect("/admin/products?action=edit");
     })
-    .catch((err) => console.log(err));
+    .catch((err) => next(err));
 };
 
 exports.postDeleteProduct = (req, res, next) => {
   const id = req.body.productid;
 
-  Product.findByIdAndRemove(id)
-    .then(() => {
-      console.log("product has been deleted.");
+  Product.findOne({ _id: id, userId: req.user._id })
+    .then((product) => {
+      if (!product) {
+        return next(new Error("Silinmek istenen ürün bulunamadı"));
+      }
+      fs.unlink("public/img/" + product.imageUrl, (err) => {
+        if (err) {
+          console.log(err);
+        }
+      });
+
+      return Product.deleteOne({ _id: id, userId: req.user._id });
+    })
+    .then((result) => {
+      if (result.deletedCount === 0) {
+        return next(new Error("Silinmek istenen ürün bulunamadı"));
+      }
       res.redirect("/admin/products?action=delete");
     })
     .catch((err) => {
-      console.log(err);
+      next(err);
     });
 };
-
 exports.getAddCategory = (req, res, next) => {
   res.render("admin/add-category", {
     title: "New Category",
@@ -145,7 +221,7 @@ exports.postAddCategory = (req, res, next) => {
     .then((result) => {
       res.redirect("/admin/categories?action=create");
     })
-    .catch((err) => console.log(err));
+    .catch((err) => next(err));
 };
 
 exports.getCategories = (req, res, next) => {
@@ -158,7 +234,7 @@ exports.getCategories = (req, res, next) => {
         action: req.query.action,
       });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => next(err));
 };
 
 exports.getEditCategory = (req, res, next) => {
@@ -170,7 +246,7 @@ exports.getEditCategory = (req, res, next) => {
         category: category,
       });
     })
-    .catch((err) => console.log(err));
+    .catch((err) => next(err));
 };
 
 exports.postEditCategory = (req, res, next) => {
@@ -187,7 +263,7 @@ exports.postEditCategory = (req, res, next) => {
     .then(() => {
       res.redirect("/admin/categories?action=edit");
     })
-    .catch((err) => console.log(err));
+    .catch((err) => next(err));
 };
 
 exports.postDeleteCategory = (req, res, next) => {
@@ -198,6 +274,6 @@ exports.postDeleteCategory = (req, res, next) => {
       res.redirect("/admin/categories?action=delete");
     })
     .catch((err) => {
-      console.log(err);
+      next(err);
     });
 };
